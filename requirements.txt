@@ -1,4 +1,4 @@
-flaskAdd commentMore actions
-python-dotenv
+Flask
 PyMuPDF
+python-dotenv
 openai
