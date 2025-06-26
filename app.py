@@ -5,16 +5,23 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import json
 
+# Load environment variables
 load_dotenv()
-print("API KEY:", os.getenv("OPENAI_API_KEY"))
-print("BASE URL:", os.getenv("OPENAI_API_BASE"))
+
+# Setup Flask app
 app = Flask(__name__)
 os.makedirs("uploads", exist_ok=True)
 
-# ✅ Configure client for OpenRouter explicitly
+# ✅ OpenRouter setup
+api_key = os.getenv("OPENROUTER_API_KEY")
+base_url = os.getenv("OPENROUTER_BASE_URL")
+
+if not api_key or not base_url:
+    raise ValueError("OPENROUTER_API_KEY or OPENROUTER_BASE_URL not set in .env")
+
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    base_url=os.getenv("OPENAI_API_BASE")
+    api_key=api_key,
+    base_url=base_url  # ✅ Note: OpenAI Python SDK uses `base_url`
 )
 
 @app.route("/upload", methods=["POST"])
@@ -27,10 +34,9 @@ def upload_resume():
     file_path = os.path.join("uploads", filename)
     pdf.save(file_path)
 
+    # Extract text from PDF
     doc = fitz.open(file_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
+    text = "".join([page.get_text() for page in doc])
 
     prompt = f"""
 Extract a list of programming languages, frameworks, and technologies from the resume text below.
@@ -41,23 +47,17 @@ Resume text:
 
     try:
         response = client.chat.completions.create(
-    model="mistralai/mistral-7b-instruct",  # ✅ Correct model ID
-    messages=[{"role": "user", "content": prompt}]
-)
+            model="openrouter/mistralai/mistral-7b",  # ✅ Correct OpenRouter model ID
+            messages=[{"role": "user", "content": prompt}]
+        )
 
         content = response.choices[0].message.content.strip()
         skills = json.loads(content)
 
         return jsonify({"skills": skills})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host="0.0.0.0", port=port)
-
-
-#     python -m venv venv
-# venv\Scripts\activate
-# python app.py
