@@ -1,0 +1,4 @@
+flaskAdd commentMore actions
+python-dotenv
+PyMuPDF
+openai
